@@ -184,12 +184,14 @@ function buildWheelSvg({ includePointer = true } = {}) {
     const start = -90 + index * step;
     const end = start + step;
     const mid = start + step / 2;
-    const textPoint = polar(center, center, radius * 0.62, mid);
+    const textRadius = radius * 0.62;
+    const textPoint = polar(center, center, textRadius, mid);
     const iconPoint = polar(center, center, radius * 0.38, mid);
+    const availableTextWidth = Math.max(74, 2 * textRadius * Math.sin((step * Math.PI / 180) / 2) - 56);
     return `
       <path d="${describeArc(center, center, radius, start, end)}" fill="${prize.color}" stroke="#ffffff" stroke-width="5"/>
       <g transform="translate(${iconPoint.x - 32} ${iconPoint.y - 32})" color="#ffffff">${sanitizeSvg(prize.icon)}</g>
-      <text x="${textPoint.x}" y="${textPoint.y}" text-anchor="middle" dominant-baseline="middle" fill="${config.settings.prizeTextColor}" font-family="Arial, sans-serif" font-size="28" font-weight="700" transform="rotate(${mid + 90} ${textPoint.x} ${textPoint.y})">${escapeHtml(prize.name)}</text>`;
+      ${buildPrizeText(prize.name, textPoint, mid, availableTextWidth)}`;
   }).join('');
   const pointer = includePointer ? '<path d="M450 18 L485 88 L415 88 Z" fill="#152033" stroke="#ffffff" stroke-width="6"/>' : '';
 
@@ -201,6 +203,52 @@ function buildWheelSvg({ includePointer = true } = {}) {
     <circle cx="450" cy="450" r="48" fill="#6d5dfc"/>
     ${pointer}
   </svg>`;
+}
+
+
+function buildPrizeText(name, point, angle, maxWidth) {
+  const baseFontSize = 28;
+  const minFontSize = 13;
+  const lines = wrapPrizeName(name, maxWidth, baseFontSize);
+  const longestLine = lines.reduce((longest, line) => Math.max(longest, estimateTextWidth(line, baseFontSize)), 0);
+  const fontSize = Math.max(minFontSize, Math.min(baseFontSize, Math.floor(baseFontSize * maxWidth / Math.max(longestLine, 1))));
+  const lineHeight = Math.round(fontSize * 1.08);
+  const startDy = lines.length === 1 ? 0 : -lineHeight / 2;
+
+  const tspans = lines.map((line, index) => {
+    const dy = index === 0 ? startDy : lineHeight;
+    const textWidth = Math.min(maxWidth, estimateTextWidth(line, fontSize));
+    return `<tspan x="${point.x}" dy="${dy}" textLength="${textWidth}" lengthAdjust="spacingAndGlyphs">${escapeHtml(line)}</tspan>`;
+  }).join('');
+
+  return `<text x="${point.x}" y="${point.y}" text-anchor="middle" dominant-baseline="middle" fill="${config.settings.prizeTextColor}" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" transform="rotate(${angle + 90} ${point.x} ${point.y})">${tspans}</text>`;
+}
+
+function wrapPrizeName(name, maxWidth, fontSize) {
+  const normalized = String(name || '').replace(/\s+/g, ' ').trim() || 'Premio';
+  const words = normalized.split(' ');
+  const lines = [''];
+
+  words.forEach(word => {
+    const current = lines[lines.length - 1];
+    const candidate = current ? `${current} ${word}` : word;
+    if (lines.length === 1 && current && estimateTextWidth(candidate, fontSize) > maxWidth) {
+      lines.push(word);
+      return;
+    }
+    lines[lines.length - 1] = candidate;
+  });
+
+  if (lines.length === 1 && estimateTextWidth(lines[0], fontSize) > maxWidth * 1.8) {
+    const midpoint = Math.ceil(lines[0].length / 2);
+    return [lines[0].slice(0, midpoint), lines[0].slice(midpoint)].map(line => line.trim()).filter(Boolean);
+  }
+
+  return lines.slice(0, 2).map(line => line.trim()).filter(Boolean);
+}
+
+function estimateTextWidth(text, fontSize) {
+  return String(text).length * fontSize * 0.58;
 }
 
 function polar(cx, cy, r, angle) {

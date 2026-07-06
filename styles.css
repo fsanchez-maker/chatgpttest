@@ -93,3 +93,91 @@ textarea { min-height: 4.75rem; resize: vertical; font-family: ui-monospace, SFM
   .controls { max-height: none; }
   .preview { min-height: auto; }
 }
+
+.button-link, .config-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.78rem 1.15rem;
+  color: var(--brand-dark);
+  background: #eef2ff;
+  font-weight: 800;
+  text-decoration: none;
+}
+.button-link { flex: 1; }
+
+.play-body {
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  background: radial-gradient(circle at 50% 0%, #e9e7ff, transparent 32rem), linear-gradient(135deg, #111827, #26324a);
+}
+
+.play-screen {
+  width: min(980px, calc(100% - 2rem));
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem 0;
+}
+
+.play-card {
+  width: 100%;
+  text-align: center;
+  color: #fff;
+}
+
+.play-card h1 {
+  margin: 0.2rem 0 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.game-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(80vh, 90vw, 720px);
+  margin: 0 auto 1.25rem;
+}
+
+.play-wheel {
+  width: 100%;
+  aspect-ratio: 1;
+  transition: transform 4.2s cubic-bezier(0.12, 0.74, 0.12, 1);
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.35));
+}
+
+.play-wheel svg { width: 100%; height: auto; display: block; }
+
+.game-pointer {
+  position: absolute;
+  top: -0.4rem;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-left: 2rem solid transparent;
+  border-right: 2rem solid transparent;
+  border-top: 4.3rem solid #ffffff;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,0.35));
+}
+
+.spin-button {
+  min-width: min(20rem, 90vw);
+  font-size: 1.2rem;
+  box-shadow: 0 16px 35px rgba(109, 93, 252, 0.35);
+}
+.spin-button:disabled { opacity: 0.65; cursor: wait; transform: none; }
+.config-link { margin-top: 0.9rem; }
+
+.winner-dialog {
+  border: 0;
+  border-radius: 1.5rem;
+  padding: 0;
+  width: min(28rem, calc(100% - 2rem));
+  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+}
+.winner-dialog::backdrop { background: rgba(9, 14, 27, 0.72); backdrop-filter: blur(6px); }
+.winner-content { padding: 2rem; text-align: center; }
+.winner-content h2 { margin: 0.5rem 0 1.5rem; font-size: clamp(2rem, 8vw, 3.25rem); }

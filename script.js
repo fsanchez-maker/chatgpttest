@@ -1,23 +1,57 @@
+const STORAGE_KEY = 'dynamicPrizeWheelConfig';
 const defaultColors = ['#ff6b6b', '#ffd166', '#06d6a0', '#118ab2', '#7353ba', '#f15bb5', '#00bbf9', '#f77f00', '#80ed99', '#b5179e', '#4cc9f0', '#ffb703'];
 const defaultIcon = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M32 4l8.7 17.6L60 24.4 46 38l3.3 19.2L32 48.1 14.7 57.2 18 38 4 24.4l19.3-2.8z"/></svg>';
-let prizes = [];
+let prizes = loadPrizes();
+let currentRotation = 0;
 
 const editor = document.querySelector('#prize-editor');
 const preview = document.querySelector('#wheel-preview');
 const countInput = document.querySelector('#prize-count');
 const label = document.querySelector('#segment-count-label');
+const playWheel = document.querySelector('#play-wheel');
+const spinButton = document.querySelector('#spin-button');
+const winnerDialog = document.querySelector('#winner-dialog');
+const winnerName = document.querySelector('#winner-name');
 
-document.querySelector('#apply-count').addEventListener('click', () => setPrizeCount(Number(countInput.value)));
-document.querySelector('#download-svg').addEventListener('click', downloadSvg);
+if (editor && preview && countInput) {
+  document.querySelector('#apply-count').addEventListener('click', () => setPrizeCount(Number(countInput.value)));
+  document.querySelector('#download-svg').addEventListener('click', downloadSvg);
+  setPrizeCount(prizes.length || 8);
+}
+
+if (playWheel && spinButton) {
+  renderPlayWheel();
+  spinButton.addEventListener('click', spinWheel);
+  document.querySelector('#close-dialog').addEventListener('click', () => winnerDialog.close());
+}
+
+function loadPrizes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (Array.isArray(stored) && stored.length) return stored;
+  } catch (error) {
+    console.warn('No se pudo leer la configuración guardada.', error);
+  }
+  return createDefaultPrizes(8);
+}
+
+function savePrizes() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(prizes));
+}
+
+function createDefaultPrizes(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    name: `Premio ${index + 1}`,
+    color: defaultColors[index % defaultColors.length],
+    icon: defaultIcon,
+  }));
+}
 
 function setPrizeCount(count) {
   const safeCount = Math.min(24, Math.max(1, Number.isFinite(count) ? Math.round(count) : 8));
   countInput.value = safeCount;
-  prizes = Array.from({ length: safeCount }, (_, index) => prizes[index] || {
-    name: `Premio ${index + 1}`,
-    color: defaultColors[index % defaultColors.length],
-    icon: defaultIcon,
-  });
+  prizes = Array.from({ length: safeCount }, (_, index) => prizes[index] || createDefaultPrizes(safeCount)[index]);
+  savePrizes();
   renderEditor();
   renderWheel();
 }
@@ -54,6 +88,7 @@ function handlePrizeInput(event) {
     const reader = new FileReader();
     reader.onload = () => {
       prizes[index].icon = String(reader.result || '');
+      savePrizes();
       renderEditor();
       renderWheel();
     };
@@ -61,15 +96,37 @@ function handlePrizeInput(event) {
     return;
   }
   prizes[index][field] = event.target.value;
+  savePrizes();
   renderWheel();
 }
 
 function renderWheel() {
   label.textContent = `${prizes.length} premio${prizes.length === 1 ? '' : 's'}`;
-  preview.innerHTML = buildWheelSvg();
+  preview.innerHTML = buildWheelSvg({ includePointer: true });
 }
 
-function buildWheelSvg() {
+function renderPlayWheel() {
+  playWheel.innerHTML = buildWheelSvg({ includePointer: false });
+}
+
+function spinWheel() {
+  spinButton.disabled = true;
+  const winnerIndex = Math.floor(Math.random() * prizes.length);
+  const step = 360 / prizes.length;
+  const winnerMidAngle = -90 + winnerIndex * step + step / 2;
+  const extraTurns = 5 + Math.floor(Math.random() * 3);
+  const finalRotation = currentRotation + extraTurns * 360 + (270 - winnerMidAngle) - (currentRotation % 360);
+  currentRotation = finalRotation;
+  playWheel.style.transform = `rotate(${currentRotation}deg)`;
+
+  window.setTimeout(() => {
+    winnerName.textContent = prizes[winnerIndex].name;
+    winnerDialog.showModal();
+    spinButton.disabled = false;
+  }, 4300);
+}
+
+function buildWheelSvg({ includePointer = true } = {}) {
   const size = 900;
   const center = size / 2;
   const radius = 410;
@@ -85,6 +142,7 @@ function buildWheelSvg() {
       <g transform="translate(${iconPoint.x - 32} ${iconPoint.y - 32})" color="#ffffff">${sanitizeSvg(prize.icon)}</g>
       <text x="${textPoint.x}" y="${textPoint.y}" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700" transform="rotate(${mid + 90} ${textPoint.x} ${textPoint.y})">${escapeHtml(prize.name)}</text>`;
   }).join('');
+  const pointer = includePointer ? '<path d="M450 18 L485 88 L415 88 Z" fill="#152033" stroke="#ffffff" stroke-width="6"/>' : '';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-label="Rueda de premios">
     <rect width="900" height="900" fill="none"/>
@@ -92,7 +150,7 @@ function buildWheelSvg() {
     ${segments}
     <circle cx="450" cy="450" r="82" fill="#ffffff" stroke="#152033" stroke-width="8"/>
     <circle cx="450" cy="450" r="48" fill="#6d5dfc"/>
-    <path d="M450 18 L485 88 L415 88 Z" fill="#152033" stroke="#ffffff" stroke-width="6"/>
+    ${pointer}
   </svg>`;
 }
 
@@ -116,7 +174,7 @@ function escapeHtml(value) { return String(value).replace(/[&<>"]/g, char => ({'
 function escapeAttr(value) { return escapeHtml(value).replace(/'/g, '&#39;'); }
 
 function downloadSvg() {
-  const blob = new Blob([buildWheelSvg()], { type: 'image/svg+xml;charset=utf-8' });
+  const blob = new Blob([buildWheelSvg({ includePointer: true })], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -124,5 +182,3 @@ function downloadSvg() {
   link.click();
   URL.revokeObjectURL(url);
 }
-
-setPrizeCount(8);

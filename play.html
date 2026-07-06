@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jugar rueda de premios</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="play-body">
+  <main class="play-screen" aria-labelledby="play-title">
+    <section class="play-card">
+      <p class="eyebrow">Rueda de premios</p>
+      <h1 id="play-title">Gira y descubre tu premio</h1>
+      <div class="game-stage">
+        <div class="game-pointer" aria-hidden="true"></div>
+        <div id="play-wheel" class="play-wheel"></div>
+      </div>
+      <button id="spin-button" type="button" class="primary spin-button">Tirar la rueda</button>
+      <a href="index.html" class="config-link">Configurar premios</a>
+    </section>
+  </main>
+
+  <dialog id="winner-dialog" class="winner-dialog">
+    <div class="winner-content">
+      <p class="eyebrow">Premio ganador</p>
+      <h2 id="winner-name"></h2>
+      <button id="close-dialog" type="button">Cerrar</button>
+    </div>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,7 +1,14 @@
 const STORAGE_KEY = 'dynamicPrizeWheelConfig';
+const defaultSettings = {
+  title: 'Gira y descubre tu premio',
+  backgroundColor: '#111827',
+  titleColor: '#ffffff',
+  prizeTextColor: '#ffffff',
+};
 const defaultColors = ['#ff6b6b', '#ffd166', '#06d6a0', '#118ab2', '#7353ba', '#f15bb5', '#00bbf9', '#f77f00', '#80ed99', '#b5179e', '#4cc9f0', '#ffb703'];
 const defaultIcon = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M32 4l8.7 17.6L60 24.4 46 38l3.3 19.2L32 48.1 14.7 57.2 18 38 4 24.4l19.3-2.8z"/></svg>';
-let prizes = loadPrizes();
+let config = loadConfig();
+let prizes = config.prizes;
 let currentRotation = 0;
 
 const editor = document.querySelector('#prize-editor');
@@ -12,31 +19,69 @@ const playWheel = document.querySelector('#play-wheel');
 const spinButton = document.querySelector('#spin-button');
 const winnerDialog = document.querySelector('#winner-dialog');
 const winnerName = document.querySelector('#winner-name');
+const gameTitleInput = document.querySelector('#game-title-input');
+const backgroundColorInput = document.querySelector('#background-color-input');
+const titleColorInput = document.querySelector('#title-color-input');
+const prizeTextColorInput = document.querySelector('#prize-text-color-input');
+const playTitle = document.querySelector('#play-title');
 
 if (editor && preview && countInput) {
   document.querySelector('#apply-count').addEventListener('click', () => setPrizeCount(Number(countInput.value)));
   document.querySelector('#download-svg').addEventListener('click', downloadSvg);
+  bindSettingsControls();
   setPrizeCount(prizes.length || 8);
 }
 
+
 if (playWheel && spinButton) {
+  applyPlaySettings();
   renderPlayWheel();
   spinButton.addEventListener('click', spinWheel);
   document.querySelector('#close-dialog').addEventListener('click', () => winnerDialog.close());
 }
 
-function loadPrizes() {
+function loadConfig() {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (Array.isArray(stored) && stored.length) return stored;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (Array.isArray(stored) && stored.length) return { prizes: stored, settings: { ...defaultSettings } };
+    if (stored?.prizes?.length) return {
+      prizes: stored.prizes,
+      settings: { ...defaultSettings, ...(stored.settings || {}) },
+    };
   } catch (error) {
     console.warn('No se pudo leer la configuración guardada.', error);
   }
-  return createDefaultPrizes(8);
+  return { prizes: createDefaultPrizes(8), settings: { ...defaultSettings } };
 }
 
-function savePrizes() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prizes));
+function saveConfig() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+}
+
+function bindSettingsControls() {
+  const controls = [
+    [gameTitleInput, 'title'],
+    [backgroundColorInput, 'backgroundColor'],
+    [titleColorInput, 'titleColor'],
+    [prizeTextColorInput, 'prizeTextColor'],
+  ];
+
+  controls.forEach(([input, key]) => {
+    input.value = config.settings[key];
+    input.addEventListener('input', () => {
+      config.settings[key] = input.value;
+      saveConfig();
+      renderWheel();
+    });
+  });
+}
+
+function applyPlaySettings() {
+  document.body.style.background = config.settings.backgroundColor;
+  if (playTitle) {
+    playTitle.textContent = config.settings.title;
+    playTitle.style.color = config.settings.titleColor;
+  }
 }
 
 function createDefaultPrizes(count) {
@@ -51,7 +96,8 @@ function setPrizeCount(count) {
   const safeCount = Math.min(24, Math.max(1, Number.isFinite(count) ? Math.round(count) : 8));
   countInput.value = safeCount;
   prizes = Array.from({ length: safeCount }, (_, index) => prizes[index] || createDefaultPrizes(safeCount)[index]);
-  savePrizes();
+  config.prizes = prizes;
+  saveConfig();
   renderEditor();
   renderWheel();
 }
@@ -88,7 +134,8 @@ function handlePrizeInput(event) {
     const reader = new FileReader();
     reader.onload = () => {
       prizes[index].icon = String(reader.result || '');
-      savePrizes();
+      config.prizes = prizes;
+      saveConfig();
       renderEditor();
       renderWheel();
     };
@@ -96,7 +143,8 @@ function handlePrizeInput(event) {
     return;
   }
   prizes[index][field] = event.target.value;
-  savePrizes();
+  config.prizes = prizes;
+  saveConfig();
   renderWheel();
 }
 
@@ -104,6 +152,7 @@ function renderWheel() {
   label.textContent = `${prizes.length} premio${prizes.length === 1 ? '' : 's'}`;
   preview.innerHTML = buildWheelSvg({ includePointer: true });
 }
+
 
 function renderPlayWheel() {
   playWheel.innerHTML = buildWheelSvg({ includePointer: false });
@@ -140,7 +189,7 @@ function buildWheelSvg({ includePointer = true } = {}) {
     return `
       <path d="${describeArc(center, center, radius, start, end)}" fill="${prize.color}" stroke="#ffffff" stroke-width="5"/>
       <g transform="translate(${iconPoint.x - 32} ${iconPoint.y - 32})" color="#ffffff">${sanitizeSvg(prize.icon)}</g>
-      <text x="${textPoint.x}" y="${textPoint.y}" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700" transform="rotate(${mid + 90} ${textPoint.x} ${textPoint.y})">${escapeHtml(prize.name)}</text>`;
+      <text x="${textPoint.x}" y="${textPoint.y}" text-anchor="middle" dominant-baseline="middle" fill="${config.settings.prizeTextColor}" font-family="Arial, sans-serif" font-size="28" font-weight="700" transform="rotate(${mid + 90} ${textPoint.x} ${textPoint.y})">${escapeHtml(prize.name)}</text>`;
   }).join('');
   const pointer = includePointer ? '<path d="M450 18 L485 88 L415 88 Z" fill="#152033" stroke="#ffffff" stroke-width="6"/>' : '';
 

@@ -181,3 +181,43 @@ textarea { min-height: 4.75rem; resize: vertical; font-family: ui-monospace, SFM
 .winner-dialog::backdrop { background: rgba(9, 14, 27, 0.72); backdrop-filter: blur(6px); }
 .winner-content { padding: 2rem; text-align: center; }
 .winner-content h2 { margin: 0.5rem 0 1.5rem; font-size: clamp(2rem, 8vw, 3.25rem); }
+
+.settings-card {
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  background: #ffffff;
+}
+.settings-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.gear-link {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  color: #152033;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  font-size: 1.35rem;
+  text-decoration: none;
+  transition: transform 160ms ease, background 160ms ease;
+}
+.gear-link:hover { transform: rotate(24deg) scale(1.04); background: #ffffff; }
+
+@media (max-width: 620px) {
+  .appearance-grid { grid-template-columns: 1fr; }
+}
